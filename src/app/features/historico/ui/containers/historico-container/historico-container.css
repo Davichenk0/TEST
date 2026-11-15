@@ -1,0 +1,19 @@
+.cargando {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fila-detalle td {
+  padding: 0;
+  background: var(--superficie-suave);
+}
+
+.fila-detalle app-novedad-detalle {
+  display: block;
+  padding: 20px 22px;
+}
+
+.fila-detalle td {
+  border-bottom: 1px solid var(--borde);
+}

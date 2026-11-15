@@ -1,0 +1,27 @@
+# Dependencias
+/node_modules
+
+# Compilados
+/dist
+/out-tsc
+
+# Angular
+/.angular/cache
+
+# Entorno
+.env
+.env.local
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Sistema
+.DS_Store
+Thumbs.db

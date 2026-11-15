@@ -1,0 +1,245 @@
+<app-page-header
+  titulo="Aprobaciones"
+  descripcion="Control de estados: sin novedad, pendiente de aprobación y aprobada."
+>
+  <div acciones class="pagina__acciones">
+    <span class="chip">
+      <app-icon nombre="escudo" [tamano]="15" />
+      Aprobador: {{ sesion.usuario().nombre }}
+    </span>
+  </div>
+</app-page-header>
+
+<section class="grid grid--3">
+  <app-stat-card
+    etiqueta="Semanas sin novedad"
+    [valor]="semanasSinNovedad()"
+    detalle="Semanas sin reorganizaciones registradas"
+    icono="check"
+    tono="exito"
+  />
+  <app-stat-card
+    etiqueta="Pendientes"
+    [valor]="pendientes().length"
+    detalle="Esperando aprobación del jefe inmediato"
+    icono="reloj"
+    tono="advertencia"
+  />
+  <app-stat-card
+    etiqueta="Aprobadas"
+    [valor]="aprobadas().length"
+    detalle="Reorganizaciones vigentes en la programación"
+    icono="aprobaciones"
+    tono="primario"
+  />
+</section>
+
+@if (cargando()) {
+  <section class="tarjeta">
+    <div class="tarjeta__cuerpo cargando">
+      <span class="esqueleto" style="width: 100%"></span>
+      <span class="esqueleto" style="width: 90%"></span>
+    </div>
+  </section>
+} @else if (pendientes().length === 0) {
+  <section class="tarjeta">
+    <app-empty-state
+      titulo="No hay novedades pendientes"
+      mensaje="Todas las novedades registradas ya fueron gestionadas. La programación vigente se mantiene sin cambios por aprobar."
+      icono="aprobaciones"
+    />
+  </section>
+} @else {
+  <div class="solicitudes">
+    @for (novedad of pendientes(); track novedad.id) {
+      <article class="solicitud">
+        <div class="solicitud__cabecera">
+          <app-avatar [nombre]="nombreAnalista(novedad.analistaAfectadoId)" tamano="lg" />
+          <div class="solicitud__identidad">
+            <strong>{{ nombreAnalista(novedad.analistaAfectadoId) }}</strong>
+            <span class="texto-suave texto-pequeno">{{ etiquetaSemana(novedad.semanaId) }}</span>
+          </div>
+          <div class="solicitud__meta">
+            <app-badge [etiqueta]="tipoEtiqueta(novedad)" tono="neutral" [punto]="false" />
+            <span class="texto-tenue texto-pequeno">
+              Reportada el {{ novedad.fechaReporte | fecha }}
+            </span>
+          </div>
+        </div>
+
+        <p class="solicitud__detalle">{{ novedad.detalle }}</p>
+
+        <div class="solicitud__grid">
+          <div>
+            <span class="solicitud__etiqueta">Turno original</span>
+            <app-badge
+              [etiqueta]="turnoDe(novedad.turnoOriginalId).nombre"
+              [tono]="turnoDe(novedad.turnoOriginalId).tono"
+              [punto]="false"
+            />
+          </div>
+          <div>
+            <span class="solicitud__etiqueta">Turno reorganizado</span>
+            <app-badge
+              [etiqueta]="turnoDe(novedad.turnoReorganizadoId).nombre"
+              [tono]="turnoDe(novedad.turnoReorganizadoId).tono"
+              [punto]="false"
+            />
+          </div>
+          <div>
+            <span class="solicitud__etiqueta">Analista que cubre</span>
+            <strong class="texto-pequeno">
+              {{ nombreAnalista(novedad.analistaCoberturaId) }}
+            </strong>
+          </div>
+          <div>
+            <span class="solicitud__etiqueta">Observaciones</span>
+            <span class="texto-pequeno">{{ novedad.observaciones || 'Sin observaciones.' }}</span>
+          </div>
+        </div>
+
+        <footer class="solicitud__pie">
+          <button
+            class="boton boton--fantasma boton--pequeno"
+            type="button"
+            (click)="abrirDetalle(novedad)"
+          >
+            Ver detalle
+          </button>
+          <div class="fila empujar">
+            <button
+              class="boton boton--peligro boton--pequeno"
+              type="button"
+              (click)="abrirAccion(novedad, 'rechazar')"
+            >
+              Rechazar
+            </button>
+            <button
+              class="boton boton--exito boton--pequeno"
+              type="button"
+              (click)="abrirAccion(novedad, 'aprobar')"
+            >
+              <app-icon nombre="check" [tamano]="15" />
+              Aprobar
+            </button>
+          </div>
+        </footer>
+      </article>
+    }
+  </div>
+}
+
+@if (detalle(); as novedad) {
+  <app-modal titulo="Detalle de la novedad" (cerrar)="cerrarDetalle()">
+    <app-novedad-detalle
+      [novedad]="novedad"
+      [semanaEtiqueta]="etiquetaSemana(novedad.semanaId)"
+      [nombreAfectado]="nombreAnalista(novedad.analistaAfectadoId)"
+      [nombreCobertura]="nombreAnalista(novedad.analistaCoberturaId)"
+    />
+
+    <div pie>
+      <button class="boton boton--secundario" type="button" (click)="cerrarDetalle()">
+        Cerrar
+      </button>
+    </div>
+  </app-modal>
+}
+
+@if (seleccionada(); as novedad) {
+  @if (accion(); as tipoAccion) {
+    <app-modal
+      [titulo]="tipoAccion === 'aprobar' ? 'Aprobar novedad' : 'Rechazar novedad'"
+      descripcion="La decisión queda registrada con el usuario aprobador y la fecha de gestión."
+      (cerrar)="cerrarAccion()"
+    >
+      <div class="confirmar">
+        <div class="confirmar__resumen">
+          <app-avatar [nombre]="nombreAnalista(novedad.analistaAfectadoId)" tamano="lg" />
+          <div class="pila">
+            <strong>{{ nombreAnalista(novedad.analistaAfectadoId) }}</strong>
+            <span class="texto-suave texto-pequeno">{{ etiquetaSemana(novedad.semanaId) }}</span>
+            <span class="texto-tenue texto-pequeno">{{ tipoEtiqueta(novedad) }}</span>
+          </div>
+        </div>
+
+        <div class="confirmar__turnos">
+          <div class="pila">
+            <span class="solicitud__etiqueta">Turno original</span>
+            <app-badge
+              [etiqueta]="turnoDe(novedad.turnoOriginalId).nombre"
+              [tono]="turnoDe(novedad.turnoOriginalId).tono"
+              [punto]="false"
+            />
+          </div>
+          <app-icon nombre="flecha" [tamano]="18" />
+          <div class="pila">
+            <span class="solicitud__etiqueta">Turno reorganizado</span>
+            <app-badge
+              [etiqueta]="turnoDe(novedad.turnoReorganizadoId).nombre"
+              [tono]="turnoDe(novedad.turnoReorganizadoId).tono"
+              [punto]="false"
+            />
+          </div>
+        </div>
+
+        <p class="texto-suave texto-pequeno">
+          @if (tipoAccion === 'aprobar') {
+            Al aprobar, la programación de la semana reflejará el turno reorganizado y la
+            cobertura de {{ nombreAnalista(novedad.analistaCoberturaId) }}.
+          } @else {
+            Al rechazar, se conserva el turno original y la novedad queda en el histórico.
+          }
+        </p>
+
+        <label class="campo">
+          <span class="campo__etiqueta">
+            {{ tipoAccion === 'aprobar' ? 'Observaciones de aprobación' : 'Motivo del rechazo' }}
+            @if (tipoAccion === 'rechazar') {
+              <span>*</span>
+            }
+          </span>
+          <textarea
+            class="entrada"
+            [value]="observaciones()"
+            (input)="observaciones.set($any($event.target).value)"
+            [placeholder]="
+              tipoAccion === 'aprobar'
+                ? 'Condiciones de la cobertura, confirmaciones, etc.'
+                : 'Explica por qué no se aprueba la reorganización.'
+            "
+          ></textarea>
+        </label>
+
+        @if (errorAccion()) {
+          <div class="alerta-error" role="alert">
+            <app-icon nombre="novedades" [tamano]="17" />
+            <span>{{ errorAccion() }}</span>
+          </div>
+        }
+      </div>
+
+      <div pie class="modal-acciones">
+        <button class="boton boton--secundario" type="button" (click)="cerrarAccion()">
+          Cancelar
+        </button>
+        <button
+          class="boton"
+          [class.boton--exito]="tipoAccion === 'aprobar'"
+          [class.boton--peligro]="tipoAccion === 'rechazar'"
+          type="button"
+          [disabled]="procesando()"
+          (click)="confirmar()"
+        >
+          {{
+            procesando()
+              ? 'Guardando…'
+              : tipoAccion === 'aprobar'
+                ? 'Aprobar novedad'
+                : 'Rechazar novedad'
+          }}
+        </button>
+      </div>
+    </app-modal>
+  }
+}

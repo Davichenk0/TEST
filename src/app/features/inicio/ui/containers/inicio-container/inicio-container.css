@@ -1,0 +1,125 @@
+.cargando {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lista-novedades {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-novedades li {
+  border-bottom: 1px solid var(--borde);
+}
+
+.lista-novedades li:last-child {
+  border-bottom: none;
+}
+
+.novedad {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 20px;
+  transition: background var(--transicion);
+}
+
+.novedad:hover {
+  background: var(--superficie-suave);
+}
+
+.novedad__datos {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.novedad__datos strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.novedad__datos span {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semanas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px;
+}
+
+.semana {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--superficie);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transicion), box-shadow var(--transicion),
+    transform var(--transicion);
+}
+
+.semana:hover {
+  border-color: #bcc9f2;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+  transform: translateY(-1px);
+}
+
+.semana__cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.semana__cabecera strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.semana__cabecera span {
+  color: var(--texto-tenue);
+  font-size: 11px;
+}
+
+.semana__turnos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mini-turno {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mini-turno .badge {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+@media (max-width: 1180px) {
+  .semanas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .semanas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

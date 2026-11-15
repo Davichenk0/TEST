@@ -1,0 +1,228 @@
+<app-page-header
+  [titulo]="saludo()"
+  [descripcion]="
+    semana()
+      ? 'Semana ' + semana()!.numero + ' · ' + rangoActual() + ' — resumen de la mesa de servicios.'
+      : 'Resumen de la mesa de servicios.'
+  "
+>
+  <div acciones class="pagina__acciones">
+    <a class="boton boton--primario" routerLink="/novedades" [queryParams]="{ nueva: 1 }">
+      <app-icon nombre="mas" [tamano]="17" />
+      Registrar novedad
+    </a>
+  </div>
+</app-page-header>
+
+@if (cargando()) {
+  <section class="tarjeta">
+    <div class="tarjeta__cuerpo cargando">
+      <span class="esqueleto" style="width: 55%"></span>
+      <span class="esqueleto" style="width: 100%"></span>
+      <span class="esqueleto" style="width: 88%"></span>
+    </div>
+  </section>
+} @else {
+  @if (pendientesSemana().length > 0) {
+    <div class="aviso">
+      <div class="aviso__icono">
+        <app-icon nombre="novedades" [tamano]="19" />
+      </div>
+      <div class="aviso__texto">
+        <strong>
+          {{ pendientesSemana().length }}
+          {{ pendientesSemana().length === 1 ? 'novedad pendiente' : 'novedades pendientes' }}
+          de aprobación
+        </strong>
+        <p>
+          La programación de la semana se ajustará cuando el jefe inmediato apruebe las
+          coberturas propuestas.
+        </p>
+      </div>
+      <a class="boton boton--secundario" routerLink="/aprobaciones">
+        Revisar aprobaciones
+        <app-icon nombre="flecha" [tamano]="16" />
+      </a>
+    </div>
+  }
+
+  <section class="grid grid--4">
+    <app-stat-card
+      etiqueta="Turno vigente"
+      [valor]="turnoPropio()?.turno?.nombre ?? '—'"
+      [detalle]="turnoPropio()?.turno?.horario ?? 'Sin asignación para la semana'"
+      icono="programacion"
+      tono="primario"
+    />
+    <app-stat-card
+      etiqueta="Analistas activos"
+      [valor]="analistas().length"
+      detalle="Equipo de la Mesa de Servicios CI2"
+      icono="equipo"
+      tono="info"
+    />
+    <app-stat-card
+      etiqueta="Novedades pendientes"
+      [valor]="novedades.pendientes().length"
+      [detalle]="pendientesSemana().length + ' en la semana actual'"
+      icono="novedades"
+      tono="advertencia"
+    />
+    <app-stat-card
+      etiqueta="Cobertura de la semana"
+      [valor]="cobertura().porcentaje + '%'"
+      [detalle]="cobertura().cubiertos + ' de ' + cobertura().total + ' turnos sin novedad'"
+      icono="escudo"
+      [tono]="tonoCobertura()"
+    />
+  </section>
+
+  <div class="grid grid--2">
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <div>
+          <h2 class="tarjeta__titulo">Programación de la semana</h2>
+          <p class="tarjeta__subtitulo">
+            @if (semana()) {
+              Semana {{ semana()!.numero }} · {{ rangoActual() }}
+            }
+          </p>
+        </div>
+        <a class="enlace" routerLink="/programacion">
+          Ver programación
+          <app-icon nombre="flecha" [tamano]="15" />
+        </a>
+      </div>
+
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Analista</th>
+              <th>Turno</th>
+              <th>Horario</th>
+              <th>Novedad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of filas(); track fila.analista.id) {
+              <tr>
+                <td>
+                  <div class="tabla__principal">
+                    <app-avatar [nombre]="fila.analista.nombre" tamano="sm" />
+                    <div>
+                      <div class="tabla__nombre">{{ fila.analista.nombre }}</div>
+                      <div class="tabla__secundario">{{ fila.analista.id === usuario().id ? 'Tu asignación' : 'Analista' }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <app-badge
+                    [etiqueta]="fila.turno.nombre"
+                    [tono]="fila.turno.tono"
+                    [punto]="false"
+                  />
+                </td>
+                <td class="mono texto-pequeno">{{ fila.turno.horario }}</td>
+                <td>
+                  @if (fila.novedadPendiente) {
+                    <app-badge etiqueta="Pendiente" tono="pendiente" />
+                  } @else if (fila.cambioAprobado) {
+                    <app-badge etiqueta="Reorganizado" tono="aprobada" />
+                  } @else if (fila.coberturas.length > 0) {
+                    <span class="texto-pequeno texto-suave">Cubre turno</span>
+                  } @else {
+                    <span class="texto-tenue texto-pequeno">Sin novedad</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <div>
+          <h2 class="tarjeta__titulo">Novedades de la semana</h2>
+          <p class="tarjeta__subtitulo">Registros que afectan la programación vigente.</p>
+        </div>
+        <a class="enlace" routerLink="/novedades">
+          Ver todas
+          <app-icon nombre="flecha" [tamano]="15" />
+        </a>
+      </div>
+
+      @if (novedadesSemana().length === 0) {
+        <app-empty-state
+          titulo="Sin novedades registradas"
+          mensaje="La semana no tiene ausencias, permisos ni cambios de turno registrados."
+          icono="check"
+        />
+      } @else {
+        <ul class="lista-novedades">
+          @for (novedad of novedadesSemana(); track novedad.id) {
+            <li>
+              <a class="novedad" routerLink="/novedades">
+                <app-avatar [nombre]="nombreAnalista(novedad.analistaAfectadoId)" tamano="sm" />
+                <div class="novedad__datos">
+                  <strong>{{ tipoEtiqueta(novedad.tipo) }}</strong>
+                  <span>{{ nombreAnalista(novedad.analistaAfectadoId) }}</span>
+                  <span class="texto-tenue texto-pequeno">
+                    Cubre {{ nombreAnalista(novedad.analistaCoberturaId) }} ·
+                    {{ novedad.fechaReporte | fecha: 'corta' }}
+                  </span>
+                </div>
+                <app-badge
+                  [etiqueta]="estadoEtiqueta(novedad)"
+                  [tono]="novedad.estado"
+                />
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <div>
+        <h2 class="tarjeta__titulo">Próximas semanas</h2>
+        <p class="tarjeta__subtitulo">Rotación prevista del equipo según la secuencia cíclica.</p>
+      </div>
+      <span class="chip">5 turnos · rotación semanal</span>
+    </div>
+
+    @if (proximasSemanas().length === 0) {
+      <app-empty-state
+        titulo="Sin semanas futuras"
+        mensaje="No hay más semanas generadas en la programación actual."
+        icono="programacion"
+      />
+    } @else {
+      <div class="semanas">
+        @for (semanaFutura of proximasSemanas(); track semanaFutura.id) {
+          <button class="semana" type="button" (click)="irASemana(semanaFutura)">
+            <div class="semana__cabecera">
+              <strong>Semana {{ semanaFutura.numero }}</strong>
+              <span>{{ rangoSemana(semanaFutura) }}</span>
+            </div>
+            <div class="semana__turnos">
+              @for (item of miniTurnos(semanaFutura); track item.analista.id) {
+                <span
+                  class="mini-turno"
+                  [attr.title]="item.analista.nombre + ' · ' + item.turno.nombre"
+                >
+                  <app-avatar [nombre]="item.analista.nombre" tamano="sm" />
+                  <span class="badge badge--{{ item.turno.tono }}">T{{ item.turno.id }}</span>
+                </span>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </section>
+}

@@ -1,0 +1,156 @@
+<div class="shell">
+  <aside class="sidebar" [class.sidebar--abierto]="menuAbierto()">
+    <div class="marca">
+      <div class="marca__logo">SC</div>
+      <div class="marca__texto">
+        <strong>SICOV CI2</strong>
+        <span>Mesa de Servicios</span>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Navegación principal">
+      <p class="nav__grupo">Principal</p>
+      @for (item of navegacionPrincipal; track item.ruta) {
+        <a
+          class="nav__item"
+          [routerLink]="item.ruta"
+          routerLinkActive="nav__item--activo"
+          (click)="cerrarMenu()"
+        >
+          <app-icon [nombre]="item.icono" [tamano]="18" />
+          <span>{{ item.etiqueta }}</span>
+        </a>
+      }
+
+      <p class="nav__grupo">Gestión</p>
+      @for (item of navegacionGestion; track item.ruta) {
+        <a
+          class="nav__item"
+          [routerLink]="item.ruta"
+          routerLinkActive="nav__item--activo"
+          (click)="cerrarMenu()"
+        >
+          <app-icon [nombre]="item.icono" [tamano]="18" />
+          <span>{{ item.etiqueta }}</span>
+          @if (item.ruta === '/aprobaciones' && novedadesPendientes().length > 0) {
+            <span class="nav__contador">{{ novedadesPendientes().length }}</span>
+          }
+        </a>
+      }
+
+      <p class="nav__grupo">Análisis</p>
+      @for (item of navegacionAnalisis; track item.ruta) {
+        <a
+          class="nav__item"
+          [routerLink]="item.ruta"
+          routerLinkActive="nav__item--activo"
+          (click)="cerrarMenu()"
+        >
+          <app-icon [nombre]="item.icono" [tamano]="18" />
+          <span>{{ item.etiqueta }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar__pie">
+      <div class="resumen-semana">
+        <div class="resumen-semana__cabecera">
+          <app-icon nombre="programacion" [tamano]="15" />
+          <span>Semana en curso</span>
+        </div>
+        <strong>
+          @if (semanaActual(); as semana) {
+            Semana {{ semana.numero }}
+          } @else {
+            Sin programación
+          }
+        </strong>
+        <span class="resumen-semana__rango">{{ rangoSemana() }}</span>
+      </div>
+
+      <div class="usuario">
+        <app-avatar [nombre]="usuario().nombre" tamano="sm" />
+        <div class="usuario__datos">
+          <strong>{{ usuario().nombre }}</strong>
+          <span>{{ usuario().rol }}</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  @if (menuAbierto()) {
+    <button class="velo" type="button" aria-label="Cerrar menú" (click)="cerrarMenu()"></button>
+  }
+
+  <div class="contenido">
+    <header class="barra">
+      <button class="boton-icono barra__menu" type="button" (click)="alternarMenu()">
+        <app-icon nombre="menu" [tamano]="19" />
+        <span class="sr-only">Abrir menú</span>
+      </button>
+
+      <div class="barra__migas">
+        <span>Mesa de Servicios</span>
+        <app-icon nombre="derecha" [tamano]="13" />
+        <strong>{{ tituloPagina() }}</strong>
+      </div>
+
+      <div class="barra__acciones">
+        <span class="barra__fecha">{{ hoy | date: 'EEEE, d MMM' }}</span>
+
+        <a
+          class="barra__alerta"
+          routerLink="/aprobaciones"
+          [attr.aria-label]="
+            novedadesPendientes().length > 0
+              ? novedadesPendientes().length + ' novedades pendientes'
+              : 'Sin novedades pendientes'
+          "
+        >
+          <app-icon nombre="campana" [tamano]="18" />
+          @if (novedadesPendientes().length > 0) {
+            <span class="barra__punto">{{ novedadesPendientes().length }}</span>
+          }
+        </a>
+
+        <div class="barra__usuario">
+          <app-avatar [nombre]="usuario().nombre" tamano="sm" />
+          <div class="barra__usuario-datos">
+            <strong>{{ usuario().nombre }}</strong>
+            <span>{{ usuario().rol }}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="principal">
+      <router-outlet />
+    </main>
+  </div>
+
+  <div class="toasts" role="status" aria-live="polite">
+    @for (notificacion of notificaciones.items(); track notificacion.id) {
+      <div class="toast" [class]="'toast toast--' + notificacion.tono">
+        <app-icon
+          [nombre]="
+            notificacion.tono === 'exito'
+              ? 'check'
+              : notificacion.tono === 'error'
+                ? 'novedades'
+                : 'info'
+          "
+          [tamano]="17"
+        />
+        <span class="toast__texto">{{ notificacion.mensaje }}</span>
+        <button
+          class="boton-icono boton-icono--plano"
+          type="button"
+          aria-label="Cerrar notificación"
+          (click)="notificaciones.cerrar(notificacion.id)"
+        >
+          <app-icon nombre="cerrar" [tamano]="15" />
+        </button>
+      </div>
+    }
+  </div>
+</div>

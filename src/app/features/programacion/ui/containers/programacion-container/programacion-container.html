@@ -1,0 +1,330 @@
+<app-page-header
+  titulo="Programación semanal"
+  descripcion="Rotación cíclica de los cinco turnos y consulta de las próximas semanas."
+>
+  <div acciones class="pagina__acciones">
+    @if (puedeEditarParametros()) {
+      <button class="boton boton--secundario" type="button" (click)="abrirParametros()">
+        <app-icon nombre="ajustes" [tamano]="17" />
+        Parámetros
+      </button>
+    }
+  </div>
+</app-page-header>
+
+@if (cargando()) {
+  <section class="tarjeta">
+    <div class="tarjeta__cuerpo cargando">
+      <span class="esqueleto" style="width: 60%"></span>
+      <span class="esqueleto" style="width: 100%"></span>
+      <span class="esqueleto" style="width: 90%"></span>
+    </div>
+  </section>
+} @else if (!semana()) {
+  <section class="tarjeta">
+    <app-empty-state
+      titulo="Sin programación disponible"
+      mensaje="No fue posible encontrar semanas programadas para la fecha actual."
+      icono="programacion"
+    />
+  </section>
+} @else {
+  <section class="selector tarjeta">
+    <button
+      class="boton-icono"
+      type="button"
+      aria-label="Semana anterior"
+      [disabled]="!programacion.puedeAnterior()"
+      (click)="programacion.irASemanaAnterior()"
+    >
+      <app-icon nombre="izquierda" [tamano]="18" />
+    </button>
+
+    <div class="selector__centro">
+      <div class="fila">
+        <strong class="selector__titulo">Semana {{ semana()!.numero }}</strong>
+        @if (esSemanaActual(semana()!)) {
+          <span class="badge badge--info">Semana actual</span>
+        }
+      </div>
+      <span class="texto-suave texto-pequeno">{{ rangoSemana(semana()!) }}</span>
+    </div>
+
+    <select
+      class="entrada selector__lista"
+      [value]="semana()!.id"
+      (change)="programacion.seleccionarSemana($any($event.target).value)"
+    >
+      @for (item of semanas(); track item.id) {
+        <option [value]="item.id" [selected]="item.id === semana()!.id">
+          Semana {{ item.numero }} · {{ rangoSemana(item) }}
+        </option>
+      }
+    </select>
+
+    <button
+      class="boton-icono"
+      type="button"
+      aria-label="Semana siguiente"
+      [disabled]="!programacion.puedeSiguiente()"
+      (click)="programacion.irASemanaSiguiente()"
+    >
+      <app-icon nombre="derecha" [tamano]="18" />
+    </button>
+
+    <button class="boton boton--secundario" type="button" (click)="programacion.irASemanaActual()">
+      Semana actual
+    </button>
+  </section>
+
+  <div class="resumen">
+    <span class="chip">
+      <app-icon nombre="equipo" [tamano]="15" />
+      {{ resumen().operativos }} turnos operativos
+    </span>
+    <span class="chip">
+      <app-icon nombre="check" [tamano]="15" />
+      {{ resumen().ajustados }} reorganizaciones aprobadas
+    </span>
+    <span class="chip">
+      <app-icon nombre="novedades" [tamano]="15" />
+      {{ resumen().pendientes }} novedades pendientes
+    </span>
+  </div>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <div>
+        <h2 class="tarjeta__titulo">Asignación de la semana</h2>
+        <p class="tarjeta__subtitulo">Turno efectivo por analista según la rotación y las novedades aprobadas.</p>
+      </div>
+      <span class="chip">{{ filas().length }} analistas</span>
+    </div>
+
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Analista</th>
+            <th>Turno</th>
+            <th>Horario</th>
+            <th>Estado</th>
+            <th>Novedad / cobertura</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of filas(); track fila.analista.id) {
+            <tr>
+              <td>
+                <div class="tabla__principal">
+                  <app-avatar [nombre]="fila.analista.nombre" />
+                  <div>
+                    <div class="tabla__nombre">{{ fila.analista.nombre }}</div>
+                    <div class="tabla__secundario">Turno inicial: T{{ fila.analista.turnoInicial }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="pila">
+                  <app-badge
+                    [etiqueta]="fila.turno.nombre"
+                    [tono]="fila.turno.tono"
+                    [punto]="false"
+                  />
+                  @if (fila.cambioAprobado) {
+                    <span class="texto-tenue texto-pequeno">
+                      Original: {{ fila.turnoOriginal.nombre }}
+                    </span>
+                  }
+                </div>
+              </td>
+              <td class="mono">{{ fila.turno.horario }}</td>
+              <td>
+                @if (fila.turno.operativo) {
+                  <span class="estado estado--activo">Operativo</span>
+                } @else if (fila.turno.id === 4) {
+                  <span class="estado estado--descanso">Descanso</span>
+                } @else {
+                  <span class="estado estado--oficina">Oficina</span>
+                }
+              </td>
+              <td>
+                <div class="pila">
+                  @if (fila.novedadPendiente; as pendiente) {
+                    <span class="fila">
+                      <app-badge etiqueta="Pendiente" tono="pendiente" />
+                      <span class="texto-pequeno">{{ tipoNovedad(pendiente) }}</span>
+                    </span>
+                    <span class="texto-tenue texto-pequeno">
+                      Cobertura propuesta: {{ nombreAnalista(pendiente.analistaCoberturaId) }}
+                    </span>
+                  }
+
+                  @if (fila.cambioAprobado) {
+                    <span class="fila">
+                      <app-badge etiqueta="Reorganizado" tono="aprobada" />
+                      <span class="texto-pequeno">
+                        {{ fila.turnoOriginal.nombre }} → {{ fila.turno.nombre }}
+                      </span>
+                    </span>
+                  }
+
+                  @for (cobertura of fila.coberturas; track cobertura.id) {
+                    <span class="texto-pequeno">
+                      Cubre a {{ nombreAnalista(cobertura.analistaAfectadoId) }} ({{
+                        tipoNovedad(cobertura)
+                      }})
+                    </span>
+                  }
+
+                  @if (
+                    !fila.novedadPendiente && !fila.cambioAprobado && fila.coberturas.length === 0
+                  ) {
+                    <span class="texto-tenue">Sin novedades</span>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="tarjeta__cabecera">
+      <div>
+        <h2 class="tarjeta__titulo">Rotación de las próximas semanas</h2>
+        <p class="tarjeta__subtitulo">Cada analista avanza un turno por semana (1 → 2 → 3 → 4 → 5 → 1).</p>
+      </div>
+      <span class="chip">6 semanas</span>
+    </div>
+
+    <div class="tabla-contenedor">
+      <table class="tabla matriz">
+        <thead>
+          <tr>
+            <th>Analista</th>
+            @for (columna of columnasMatriz(); track columna.id) {
+              <th
+                [class.matriz__actual]="esSemanaActual(columna)"
+                [class.matriz__seleccionada]="esSeleccionada(columna)"
+              >
+                <span class="matriz__semana">S{{ columna.numero }}</span>
+                <span class="matriz__rango">{{ rangoSemana(columna) }}</span>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of filasMatriz(); track fila.analista.id) {
+            <tr>
+              <td>
+                <div class="tabla__principal">
+                  <app-avatar [nombre]="fila.analista.nombre" tamano="sm" />
+                  <span class="tabla__nombre">{{ fila.analista.nombre }}</span>
+                </div>
+              </td>
+              @for (celda of fila.celdas; track celda.semanaId) {
+                <td
+                  [class.matriz__actual]="celda.semanaId === semanaActualId()"
+                  [class.matriz__seleccionada]="celda.semanaId === semana()!.id"
+                >
+                  <span class="matriz__celda">
+                    <app-badge
+                      [etiqueta]="'T' + celda.turno.id"
+                      [tono]="celda.turno.tono"
+                      [punto]="false"
+                    />
+                    @if (celda.ajustado) {
+                      <span class="matriz__ajuste" title="Incluye una novedad aprobada"></span>
+                    }
+                  </span>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="leyenda">
+      @for (turno of turnos(); track turno.id) {
+        <span class="leyenda__item">
+          <span class="badge badge--{{ turno.tono }}">{{ turno.nombre }}</span>
+          <span class="texto-tenue texto-pequeno">{{ turno.horario }}</span>
+        </span>
+      }
+    </div>
+  </section>
+}
+
+@if (modalParametros()) {
+  <app-modal
+    titulo="Parámetros de la programación"
+    descripcion="Catálogo de turnos y asignación inicial de referencia del equipo."
+    tamano="ancho"
+    (cerrar)="cerrarParametros()"
+  >
+    <div class="parametros">
+      <section class="parametros__seccion">
+        <h3 class="parametros__titulo">Catálogo de turnos</h3>
+        <ul class="catalogo">
+          @for (turno of turnos(); track turno.id) {
+            <li class="catalogo__item">
+              <span class="catalogo__punto catalogo__punto--{{ turno.tono }}"></span>
+              <div class="catalogo__datos">
+                <strong>
+                  {{ turno.nombre }}
+                  <span class="texto-tenue texto-pequeno">{{ turno.horario }}</span>
+                </strong>
+                <span>{{ turno.descripcion }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="parametros__seccion">
+        <h3 class="parametros__titulo">Asignación inicial de referencia</h3>
+        <p class="texto-suave texto-pequeno parametros__nota">
+          Al guardar, la rotación de las {{ semanas().length }} semanas se recalcula tomando
+          como referencia la semana en curso. Las novedades ya registradas no se eliminan.
+        </p>
+
+        <div class="asignaciones">
+          @for (analista of analistas(); track analista.id) {
+            <div class="asignacion">
+              <app-avatar [nombre]="analista.nombre" tamano="sm" />
+              <span class="asignacion__nombre">{{ analista.nombre }}</span>
+              <select
+                class="entrada asignacion__select"
+                (change)="cambiarTurno(analista.id, $event)"
+              >
+                @for (turno of turnos(); track turno.id) {
+                  <option [value]="turno.id" [selected]="turno.id === turnoBorrador(analista.id)">
+                    {{ turno.nombre }} · {{ turno.horario }}
+                  </option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <div pie class="modal-acciones">
+      <button class="boton boton--secundario" type="button" (click)="cerrarParametros()">
+        Cancelar
+      </button>
+      <button
+        class="boton boton--primario"
+        type="button"
+        [disabled]="!hayCambios() || guardando()"
+        (click)="guardarParametros()"
+      >
+        {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </app-modal>
+}

@@ -1,0 +1,167 @@
+<app-page-header
+  titulo="Histórico"
+  descripcion="Consulta de reorganizaciones anteriores, coberturas y observaciones registradas."
+>
+  <div acciones class="pagina__acciones">
+    <button
+      class="boton boton--secundario"
+      type="button"
+      [disabled]="filtradas().length === 0"
+      (click)="exportar()"
+    >
+      <app-icon nombre="descargar" [tamano]="17" />
+      Exportar CSV
+    </button>
+  </div>
+</app-page-header>
+
+<section class="tarjeta">
+  <div class="tarjeta__cuerpo filtros">
+    <div class="filtros__busqueda">
+      <app-icon nombre="buscar" [tamano]="17" />
+      <input
+        class="entrada"
+        type="search"
+        placeholder="Buscar por analista, detalle, observaciones o aprobador"
+        [value]="filtroTexto()"
+        (input)="filtroTexto.set($any($event.target).value)"
+      />
+    </div>
+
+    <select
+      class="entrada"
+      [value]="filtroEstado()"
+      (change)="filtroEstado.set($any($event.target).value)"
+      aria-label="Filtrar por estado"
+    >
+      <option value="todas">Todos los estados</option>
+      <option value="aprobada">Aprobadas</option>
+      <option value="rechazada">Rechazadas</option>
+    </select>
+
+    <select
+      class="entrada"
+      [value]="filtroSemana()"
+      (change)="filtroSemana.set($any($event.target).value)"
+      aria-label="Filtrar por semana"
+    >
+      <option value="todas">Todas las semanas</option>
+      @for (semana of programacion.semanas(); track semana.id) {
+        <option [value]="semana.id">Semana {{ semana.numero }}</option>
+      }
+    </select>
+
+    @if (hayFiltros()) {
+      <button class="boton boton--fantasma boton--pequeno" type="button" (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    }
+  </div>
+</section>
+
+<section class="tarjeta">
+  <div class="tarjeta__cabecera">
+    <div>
+      <h2 class="tarjeta__titulo">Reorganizaciones anteriores</h2>
+      <p class="tarjeta__subtitulo">
+        {{ filtradas().length }} registros gestionados · el turno original se conserva siempre.
+      </p>
+    </div>
+    <span class="chip">{{ gestionadas().length }} en el histórico</span>
+  </div>
+
+  @if (cargando()) {
+    <div class="tarjeta__cuerpo cargando">
+      <span class="esqueleto" style="width: 100%"></span>
+      <span class="esqueleto" style="width: 94%"></span>
+    </div>
+  } @else if (filtradas().length === 0) {
+    <app-empty-state
+      titulo="Sin registros en el histórico"
+      mensaje="Las novedades aprobadas o rechazadas aparecerán aquí con su trazabilidad completa."
+      icono="historico"
+    />
+  } @else {
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Reporte</th>
+            <th>Semana</th>
+            <th>Analista afectado</th>
+            <th>Tipo</th>
+            <th>Turnos</th>
+            <th>Cobertura</th>
+            <th>Estado</th>
+            <th>Gestión</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (novedad of filtradas(); track novedad.id) {
+            <tr>
+              <td class="mono">{{ novedad.fechaReporte | fecha: 'corta' }}</td>
+              <td><span class="chip">{{ etiquetaSemanaCorta(novedad.semanaId) }}</span></td>
+              <td>
+                <div class="tabla__principal">
+                  <app-avatar [nombre]="nombreAnalista(novedad.analistaAfectadoId)" tamano="sm" />
+                  <span class="tabla__nombre">{{ nombreAnalista(novedad.analistaAfectadoId) }}</span>
+                </div>
+              </td>
+              <td>{{ tipoEtiqueta(novedad.tipo) }}</td>
+              <td>
+                <div class="fila">
+                  <app-badge
+                    [etiqueta]="'T' + novedad.turnoOriginalId"
+                    [tono]="turnoDe(novedad.turnoOriginalId).tono"
+                    [punto]="false"
+                  />
+                  <app-icon nombre="flecha" [tamano]="13" />
+                  <app-badge
+                    [etiqueta]="'T' + novedad.turnoReorganizadoId"
+                    [tono]="turnoDe(novedad.turnoReorganizadoId).tono"
+                    [punto]="false"
+                  />
+                </div>
+              </td>
+              <td class="texto-pequeno">{{ nombreAnalista(novedad.analistaCoberturaId) }}</td>
+              <td>
+                <app-badge [etiqueta]="estadoEtiqueta(novedad.estado)" [tono]="novedad.estado" />
+              </td>
+              <td>
+                <div class="pila">
+                  <span class="texto-pequeno">{{ novedad.gestionadoPor ?? 'Sin gestionar' }}</span>
+                  <span class="texto-tenue texto-pequeno">
+                    {{ novedad.fechaGestion | fecha: 'corta' }}
+                  </span>
+                </div>
+              </td>
+              <td class="celda-derecha">
+                <button
+                  class="boton boton--secundario boton--pequeno"
+                  type="button"
+                  (click)="alternarDetalle(novedad)"
+                >
+                  {{ expandida() === novedad.id ? 'Ocultar' : 'Detalle' }}
+                </button>
+              </td>
+            </tr>
+
+            @if (expandida() === novedad.id) {
+              <tr class="fila-detalle">
+                <td colspan="9">
+                  <app-novedad-detalle
+                    [novedad]="novedad"
+                    [semanaEtiqueta]="etiquetaSemana(novedad.semanaId)"
+                    [nombreAfectado]="nombreAnalista(novedad.analistaAfectadoId)"
+                    [nombreCobertura]="nombreAnalista(novedad.analistaCoberturaId)"
+                  />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

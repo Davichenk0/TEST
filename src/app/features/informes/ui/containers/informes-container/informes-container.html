@@ -1,0 +1,236 @@
+<app-page-header
+  titulo="Informes"
+  descripcion="Indicadores de novedades, coberturas y aprobaciones de la Mesa de Servicios SICOV CI2."
+>
+  <div acciones class="pagina__acciones">
+    <button class="boton boton--secundario" type="button" (click)="exportar()">
+      <app-icon nombre="descargar" [tamano]="17" />
+      Exportar CSV
+    </button>
+  </div>
+</app-page-header>
+
+@if (cargando()) {
+  <section class="tarjeta">
+    <div class="tarjeta__cuerpo cargando">
+      <span class="esqueleto" style="width: 70%"></span>
+      <span class="esqueleto" style="width: 100%"></span>
+    </div>
+  </section>
+} @else {
+  <section class="grid grid--4">
+    <app-stat-card
+      etiqueta="Total novedades"
+      [valor]="total()"
+      detalle="Registros del período consultado"
+      icono="novedades"
+      tono="primario"
+    />
+    <app-stat-card
+      etiqueta="Aprobadas"
+      [valor]="aprobadas()"
+      detalle="Reorganizaciones vigentes"
+      icono="aprobaciones"
+      tono="exito"
+    />
+    <app-stat-card
+      etiqueta="Pendientes"
+      [valor]="pendientes()"
+      detalle="En espera de aprobación"
+      icono="reloj"
+      tono="advertencia"
+    />
+    <app-stat-card
+      etiqueta="Cobertura de novedades"
+      [valor]="cobertura() + '%'"
+      detalle="Aprobadas sobre novedades gestionadas"
+      icono="escudo"
+      tono="info"
+    />
+  </section>
+
+  @if (total() === 0) {
+    <section class="tarjeta">
+      <app-empty-state
+        titulo="Sin datos para informar"
+        mensaje="Registra novedades para generar indicadores de cobertura, tipos y aprobaciones."
+        icono="informes"
+      />
+    </section>
+  } @else {
+    <div class="grid grid--2">
+      <section class="tarjeta">
+        <div class="tarjeta__cabecera">
+          <div>
+            <h2 class="tarjeta__titulo">Novedades por turno original</h2>
+            <p class="tarjeta__subtitulo">Turno previsto antes de la reorganización.</p>
+          </div>
+        </div>
+        <div class="tarjeta__cuerpo barras">
+          @for (item of porTurno(); track item.etiqueta) {
+            <div class="barra">
+              <div class="barra__cabecera">
+                <span class="barra__etiqueta">{{ item.etiqueta }}</span>
+                <strong class="barra__valor">{{ item.total }}</strong>
+              </div>
+              <div class="barra__pista">
+                <div
+                  class="barra__relleno"
+                  [style.width.%]="item.porcentaje"
+                  [style.background]="item.color"
+                ></div>
+              </div>
+              <span class="barra__detalle">{{ item.detalle }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <div class="tarjeta__cabecera">
+          <div>
+            <h2 class="tarjeta__titulo">Distribución por estado</h2>
+            <p class="tarjeta__subtitulo">Trazabilidad de las aprobaciones del jefe inmediato.</p>
+          </div>
+        </div>
+        <div class="tarjeta__cuerpo estados">
+          <div class="dona" [style.background]="donaEstados()">
+            <div class="dona__hueco">
+              <strong>{{ total() }}</strong>
+              <span>novedades</span>
+            </div>
+          </div>
+
+          <ul class="leyenda-estados">
+            @for (estado of porEstado(); track estado.etiqueta) {
+              <li>
+                <span class="leyenda-estados__punto" [style.background]="estado.color"></span>
+                <span class="leyenda-estados__texto">{{ estado.etiqueta }}</span>
+                <strong>{{ estado.total }}</strong>
+              </li>
+            }
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid grid--2">
+      <section class="tarjeta">
+        <div class="tarjeta__cabecera">
+          <div>
+            <h2 class="tarjeta__titulo">Novedades por tipo</h2>
+            <p class="tarjeta__subtitulo">Causas registradas en el período.</p>
+          </div>
+        </div>
+        <div class="tarjeta__cuerpo barras">
+          @for (item of porTipo(); track item.etiqueta) {
+            <div class="barra">
+              <div class="barra__cabecera">
+                <span class="barra__etiqueta">{{ item.etiqueta }}</span>
+                <strong class="barra__valor">{{ item.total }}</strong>
+              </div>
+              <div class="barra__pista">
+                <div
+                  class="barra__relleno"
+                  [style.width.%]="item.porcentaje"
+                  [style.background]="item.color"
+                ></div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <div class="tarjeta__cabecera">
+          <div>
+            <h2 class="tarjeta__titulo">Novedades por analista</h2>
+            <p class="tarjeta__subtitulo">Analistas afectados por reorganizaciones.</p>
+          </div>
+        </div>
+        <div class="tarjeta__cuerpo analistas">
+          @for (item of porAnalista(); track item.analista.id) {
+            <div class="analista">
+              <app-avatar [nombre]="item.analista.nombre" tamano="sm" />
+              <div class="analista__datos">
+                <div class="fila">
+                  <span class="analista__nombre">{{ item.analista.nombre }}</span>
+                  <span class="empujar texto-tenue texto-pequeno">
+                    {{ item.aprobadas }} aprobadas · {{ item.pendientes }} pendientes
+                  </span>
+                </div>
+                <div class="barra__pista barra__pista--sm">
+                  <div class="barra__relleno" [style.width.%]="item.porcentaje"></div>
+                </div>
+              </div>
+              <app-badge
+                [etiqueta]="item.total + ''"
+                [tono]="item.total > 0 ? 'info' : 'neutral'"
+                [punto]="false"
+              />
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <section class="tarjeta">
+      <div class="tarjeta__cabecera">
+        <div>
+          <h2 class="tarjeta__titulo">Resumen semanal</h2>
+          <p class="tarjeta__subtitulo">Novedades por semana de programación.</p>
+        </div>
+        <span class="chip">{{ porSemana().length }} semanas</span>
+      </div>
+
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Semana</th>
+              <th>Rango</th>
+              <th class="celda-derecha">Novedades</th>
+              <th class="celda-derecha">Aprobadas</th>
+              <th class="celda-derecha">Pendientes</th>
+              <th class="celda-derecha">Rechazadas</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of porSemana(); track item.semana.id) {
+              <tr>
+                <td>
+                  <span class="tabla__nombre">Semana {{ item.semana.numero }}</span>
+                </td>
+                <td class="texto-pequeno texto-suave">{{ rangoSemana(item.semana) }}</td>
+                <td class="celda-derecha mono">{{ item.total }}</td>
+                <td class="celda-derecha mono">{{ item.aprobadas }}</td>
+                <td class="celda-derecha mono">{{ item.pendientes }}</td>
+                <td class="celda-derecha mono">{{ item.rechazadas }}</td>
+                <td>
+                  @if (item.pendientes > 0) {
+                    <app-badge etiqueta="Pendiente" tono="pendiente" />
+                  } @else if (item.total === 0) {
+                    <app-badge etiqueta="Sin novedad" tono="exito" />
+                  } @else {
+                    <app-badge etiqueta="Gestionada" tono="neutral" />
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" class="texto-fuerte">Totales</td>
+              <td class="celda-derecha mono texto-fuerte">{{ totalesSemana().total }}</td>
+              <td class="celda-derecha mono texto-fuerte">{{ totalesSemana().aprobadas }}</td>
+              <td class="celda-derecha mono texto-fuerte">{{ totalesSemana().pendientes }}</td>
+              <td class="celda-derecha mono texto-fuerte">{{ totalesSemana().rechazadas }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  }
+}
